@@ -260,6 +260,23 @@ df_quant.loc[0.05:0.95]['Variance'].unstack(level=0).plot()
 # Export data for plotting in MMA
 #–------------------------------------
 
+df_ews.reset_index().to_csv('data_export/sim1_ews.csv')
+
+df_quant['Variance'].reset_index().to_csv('data_export/sim1_ews_boot.csv')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
