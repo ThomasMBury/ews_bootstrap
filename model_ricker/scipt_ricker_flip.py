@@ -33,7 +33,7 @@ from roll_bootstrap import roll_bootstrap
 
 
 # Name of directory within data_export
-dir_name = 'flip_sim1'
+dir_name = 'flip_block20_ham80_rw04_noise004'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -52,25 +52,25 @@ dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
 tmax = 1000
 tburn = 100 # burn-in period
-seed = 2 # random number generation seedaa
-sigma = 0.02 # noise intensity
+seed = 0 # random number generation seed
+sigma = 0.04 # noise intensity
 
 
 
 # EWS parameters
 span = 0.5
-rw = 0.25
+rw = 0.4
 ews = ['var','ac','smax','aic']
 lags = [1,2,3] # autocorrelation lag times
-ham_length = 40 # number of data points in Hamming window
+ham_length = 80 # number of data points in Hamming window
 ham_offset = 0.5 # proportion of Hamming window to offset by upon each iteration
 pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
 
 
 # Bootstrapping parameters
-block_size = 10 # size of blocks used to resample time-series
+block_size = 20 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 2 # number of bootstrapping samples to take
+n_samples = 20 # number of bootstrapping samples to take
 roll_offset = 20 # rolling window offset
 
 
@@ -86,7 +86,7 @@ f = 0 # harvesting rate (fixed for exploring flip bifurcation)
 k = 10 # carrying capacity
 h = 0.75 # half-saturation constant of harvesting function
 bl = 0.5 # bifurcation parameter (growth rate) low
-bh = 2.6 # bifurcation parameter (growth rate) high
+bh = 2.3 # bifurcation parameter (growth rate) high
 bcrit = 2 # bifurcation point (computed in Mathematica)
 x0 = 0.8 # initial condition
 
@@ -149,7 +149,9 @@ ews_dic = ews_compute(series,
                       roll_window = rw,
                       upto = tcrit,
                       ews = ews,
-                      lag_times = lags)
+                      lag_times = lags,
+                      ham_length = ham_length,
+                      ham_offset = ham_offset)
 
 # DataFrame of EWS
 df_ews = ews_dic['EWS metrics']
@@ -189,6 +191,8 @@ df_samples = roll_bootstrap(series,
 
 # List to store EWS DataFrames
 list_df_ews = []
+# List to store power spectra 
+list_pspec = []
 
 # Realtime values
 tVals = np.array(df_samples.index.levels[0])
@@ -211,7 +215,9 @@ for t in tVals:
                           band_width = 1,
                           ews = ews,
                           lag_times = lags,
-                          upto='Full')
+                          upto='Full',
+                          ham_length = ham_length,
+                          ham_offset = ham_offset)
         
         # The DataFrame of EWS
         df_ews_temp = ews_dic['EWS metrics']
@@ -226,13 +232,17 @@ for t in tVals:
         # Append list_df_ews
         list_df_ews.append(df_ews_temp)
     
+    # Output a power spectrum of one of the samples
+    df_pspec_temp = ews_dic['Power spectrum'][['Empirical']].dropna()
+    list_pspec.append(df_pspec_temp)
+    
     # Print update
     print('EWS for t=%.2f complete' % t)
         
 # Concatenate EWS DataFrames. Index [Realtime, Sample]
 df_ews_boot = pd.concat(list_df_ews).reset_index(drop=True).set_index(['Time','Sample'])
 
-
+df_pspec_boot = pd.concat(list_pspec)
 
 
 
@@ -325,6 +335,10 @@ df_pspec[['Empirical']].dropna().to_csv('data_export/'+dir_name+'/pspec_orig.csv
 
 # Export bootstrapped EWS
 df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot.csv')
+
+# Export bootstrapped pspec (for one sample)
+df_pspec_boot.to_csv('data_export/'+dir_name+'/pspec_boot.csv')
+
 
 
 
