@@ -31,6 +31,18 @@ sys.path.append('../')
 from roll_bootstrap import roll_bootstrap
 
 
+
+# Name of directory within data_export
+dir_name = 'fold_sim1'
+
+if not os.path.exists('data_export/'+dir_name):
+    os.makedirs('data_export/'+dir_name)
+
+
+# Print update
+print("Compute bootstrapped EWS for the Ricker model going through the Fold bifurcation")
+
+
 #--------------------------------
 # Global parameters
 #–-----------------------------
@@ -41,7 +53,7 @@ dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
 tmax = 1000
 tburn = 100 # burn-in period
-seed = 2 # random number generation seedaa
+seed = 6 # random number generation seed
 sigma = 0.02 # noise intensity
 
 # EWS parameters
@@ -55,10 +67,10 @@ pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
 
 
 # Bootstrapping parameters
-block_size = 10 # size of blocks used to resample time-series
+block_size = 100 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 100 # number of bootstrapping samples to take
-roll_offset = 10 # rolling window offset
+n_samples = 2 # number of bootstrapping samples to take
+roll_offset = 20 # rolling window offset
 
 
 
@@ -136,10 +148,15 @@ ews_dic = ews_compute(series,
                       roll_window = rw,
                       upto = tcrit,
                       ews = ews,
-                      lag_times = lags)
+                      lag_times = lags,
+                      sweep=True)
 
 # DataFrame of EWS
 df_ews = ews_dic['EWS metrics']
+
+# DataFrame of Power spectra
+df_pspec = ews_dic['Power spectrum']
+
 
 # Plot trajectory and smoothing
 df_ews[['State variable','Smoothing']].plot()
@@ -193,7 +210,8 @@ for t in tVals:
                           band_width = 1,
                           ews = ews,
                           lag_times = lags,
-                          upto='Full')
+                          upto='Full',
+                          sweep=True)
         
         # The DataFrame of EWS
         df_ews_temp = ews_dic['EWS metrics']
@@ -285,15 +303,19 @@ df_quant.index.rename(['Time','Quantile'], inplace=True)
 df_quant = df_quant.reorder_levels(['Quantile','Time']).sort_index()
 
 
+
 #-------------------------------------
 # Export data for plotting in MMA
 #–------------------------------------
 
-df_ews.reset_index().to_csv('data_export/sim1_ews.csv')
+# Export EWS of original time-series
+df_ews.reset_index().to_csv('data_export/'+dir_name+'/ews_orig.csv')
 
-df_quant.reset_index().to_csv('data_export/sim1_ews_boot.csv')
+# Export power spectra of original time-series
+df_pspec[['Empirical']].dropna().to_csv('data_export/'+dir_name+'/pspec_orig.csv')
 
-
+# Export bootstrapped EWS
+df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot.csv')
 
 
 

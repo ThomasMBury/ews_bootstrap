@@ -31,6 +31,14 @@ sys.path.append('../')
 from roll_bootstrap import roll_bootstrap
 
 
+
+# Name of directory within data_export
+dir_name = 'flip_sim1'
+
+if not os.path.exists('data_export/'+dir_name):
+    os.makedirs('data_export/'+dir_name)
+
+
 # Print update
 print("Compute bootstrapped EWS for the Ricker model going through the Flip bifurcation")
 
@@ -62,8 +70,8 @@ pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
 # Bootstrapping parameters
 block_size = 10 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 100 # number of bootstrapping samples to take
-roll_offset = 10 # rolling window offset
+n_samples = 2 # number of bootstrapping samples to take
+roll_offset = 20 # rolling window offset
 
 
 
@@ -145,6 +153,11 @@ ews_dic = ews_compute(series,
 
 # DataFrame of EWS
 df_ews = ews_dic['EWS metrics']
+
+# DataFrame of Power spectra
+df_pspec = ews_dic['Power spectrum']
+
+
 
 # Plot trajectory and smoothing
 df_ews[['State variable','Smoothing']].plot()
@@ -304,9 +317,14 @@ df_quant = df_quant.reorder_levels(['Quantile','Time']).sort_index()
 # Export data for plotting in MMA
 #–------------------------------------
 
-df_ews.reset_index().to_csv('data_export/ews_flip.csv')
+# Export EWS of original time-series
+df_ews.reset_index().to_csv('data_export/'+dir_name+'/ews_orig.csv')
 
-df_quant.reset_index().to_csv('data_export/ews_flip_boot.csv')
+# Export power spectra of original time-series
+df_pspec[['Empirical']].dropna().to_csv('data_export/'+dir_name+'/pspec_orig.csv')
+
+# Export bootstrapped EWS
+df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot.csv')
 
 
 
