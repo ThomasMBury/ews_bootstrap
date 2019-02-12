@@ -251,7 +251,7 @@ df_pspec_boot = pd.concat(list_pspec)
 
 
 
-#------------------------------
+#---------------------------------------
 # Compute mean and confidence intervals
 #–----------------------------------------
 

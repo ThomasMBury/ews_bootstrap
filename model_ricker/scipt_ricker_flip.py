@@ -26,7 +26,7 @@ import sys
 sys.path.append('../../early_warnings')
 from ews_compute import ews_compute
 
-# Import bootstrap module
+# Import Bootstrap module 
 sys.path.append('../')
 from roll_bootstrap import roll_bootstrap
 

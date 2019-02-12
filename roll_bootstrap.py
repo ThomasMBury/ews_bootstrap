@@ -16,8 +16,6 @@ import pandas as pd
 
 
 
-
-
 # Modules for smoothing timeseries
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
@@ -140,20 +138,16 @@ def roll_bootstrap(raw_series,
 
     
     
-    #-------------------------
-    # Parameter configuration
-    #–-------------------------
+    ## Parameter configuration
     
     # Compute the rolling window size (integer value)
     rw_size=int(np.floor(roll_window * raw_series.shape[0]))
     
     
     
-    #------------------------------
+
     ## Data detrending
-    #–------------------------------
-    
-    
+
     # Select portion of data up to 'upto'
     if upto == 'Full':
         series = raw_series
@@ -167,9 +161,9 @@ def roll_bootstrap(raw_series,
 
 
 
-    #-------------------------------
-    # Rolling window over residuals
-    #-------------------------------
+
+    ## Rolling window over residuals
+
     
     # Number of components in the residual time-series
     num_comps = len(resid_series)
@@ -213,9 +207,8 @@ def roll_bootstrap(raw_series,
     
 
 
-    #-------------------------
-    # Organise output DataFrame
-    #–--------------------------
+
+    ## Organise output DataFrame
 
     
     # Concatenate list of samples
@@ -227,7 +220,35 @@ def roll_bootstrap(raw_series,
 
 
 
+#----------------------------------------
+# Compute bootstrapped confidence intervals
+#–--------------------------------------
+    
+from arch.bootstrap import IIDBootstrap
 
+def mean_ci(array, alpha):
+    '''
+    Compute the bootstrap confidence intervals (to alpha%) of the mean of array
+    Input:
+        array: numpy array of data
+        alpha: numeric for percentile
+    Ouptut:
+        Dicitonary of mean, lower and upper bound.
+    '''
+    
+    # Compute the mean of the array
+    mean = np.mean(array)
+    # Bootstrap the array (sample with replacement)
+    bs = IIDBootstrap(array)
+    # Compute confidence intervals of bootstrapped distribution
+    ci = bs.conf_int(np.mean, 1000, method='percentile', size=alpha)
+    # Lower and upper bounds
+    lower = ci[0,0]
+    upper = ci[1,0]
+    
+    # Output dictionary
+    dict_out = {"Mean": mean, "Lower": lower, "Upper": upper}
+    return dict_out
 
 
 
