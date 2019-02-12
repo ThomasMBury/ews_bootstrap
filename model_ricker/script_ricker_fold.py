@@ -33,7 +33,7 @@ from roll_bootstrap import roll_bootstrap
 
 
 # Name of directory within data_export
-dir_name = 'fold_block20_ham80_rw05_noise002'
+dir_name = 'fold_test'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -51,7 +51,7 @@ print("Compute bootstrapped EWS for the Ricker model going through the Fold bifu
 # Simulation parameters
 dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
-tmax = 1000
+tmax = 200
 tburn = 100 # burn-in period
 seed = 0 # random number generation seed
 sigma = 0.02 # noise intensity
@@ -70,14 +70,14 @@ sweep = False # during optimisation, sweep through initialisation parameters
 # Bootstrapping parameters
 block_size = 20 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 100 # number of bootstrapping samples to take
+n_samples = 10 # number of bootstrapping samples to take
 roll_offset = 20 # rolling window offset
 
-
+# hey bud... nice code you've got there.
 
 
 #----------------------------------
-# Simulate transient realisation of Ricker model
+# Simulate single transient realisation of Ricker model
 #----------------------------------
 
     
@@ -136,7 +136,7 @@ df_traj = pd.DataFrame(data).set_index('Time')
 
 
 #--------------------------------
-# Compute EWS (moments) without bootstrapping
+# Compute EWS without bootstrapping
 #-------------------------------------
 
 # Time-series data as a pandas Series
@@ -191,7 +191,7 @@ df_samples = roll_bootstrap(series,
 
 # List to store EWS DataFrames
 list_df_ews = []
-# List to store power spectra 
+# List to store power spectra DataFrames
 list_pspec = []
 
 # Realtime values
@@ -232,7 +232,7 @@ for t in tVals:
         
         # Append list_df_ews
         list_df_ews.append(df_ews_temp)
-    
+        
     # Output a power spectrum of one of the samples
     df_pspec_temp = ews_dic['Power spectrum'][['Empirical']].dropna()
     list_pspec.append(df_pspec_temp)
@@ -243,7 +243,70 @@ for t in tVals:
 # Concatenate EWS DataFrames. Index [Realtime, Sample]
 df_ews_boot = pd.concat(list_df_ews).reset_index(drop=True).set_index(['Time','Sample'])
 
+# Concatenate power spectrum DataFrames
 df_pspec_boot = pd.concat(list_pspec)
+
+
+
+
+
+
+#------------------------------
+# Compute mean and confidence intervals
+#–----------------------------------------
+
+
+# Function to find mean confidence intervals of array
+def conf_int(series, alpha=0.95):
+    '''
+    Compute mean, and upper/lower confidence intervals at alpha%
+    Input:
+        - series: Pandas series indexed by time and sample number
+        - alpha: Confidence interval percentage
+    
+    Output: Pandas Dataframe indexed by time with column labels ['Mean','Lower','Upper']
+    '''
+    
+    # Group Series by Time
+    gen = series.groupby('Time')
+    
+    def bounds(array, alpha):
+        
+        # Use Seaborn implementation for finding confidence intervals
+        [lower, upper] = sns.utils.ci(sns.algorithms.bootstrap(array), which=alpha)
+        mean = np.mean(array)
+        return [mean, lower, upper]
+    
+    # Apply to Series
+    df_temp = gen.apply(lambda x: bounds(x, alpha=0.95))
+    
+    # Put values in df into a 2d array
+    data = np.array(df_temp.values.tolist())
+    
+    # Put into a DataFrame with the appropriate columns
+    df_out = pd.DataFrame(data, columns=['Mean','Lower','Upper'],
+                          index = df_temp.index)
+    
+    
+    return df_out
+
+# Apply function to all relevant EWS and export
+ews_export = ['Variance','Lag-1 AC','Lag-2 AC','Lag-3 AC','AIC fold',
+              'AIC hopf', 'AIC null', 'Smax']
+
+ews_shorthand = ['var','ac1','ac2','ac3','aicf','aich','aicn','smax']
+
+
+for i in range(len(ews_export)):
+    # Compute mean, upper and lower intervals
+    data_out = conf_int(df_ews_boot[ews_export[i]])
+    # Export dataframe
+    data_out.to_csv('data_export/'+dir_name+'/ews_boot_'+ews_shorthand[i]+'.csv')
+
+
+
+
+
 
 
 
@@ -338,8 +401,8 @@ df_ews.reset_index().to_csv('data_export/'+dir_name+'/ews_orig.csv')
 # Export power spectra of original time-series
 df_pspec[['Empirical']].dropna().to_csv('data_export/'+dir_name+'/pspec_orig.csv')
 
-# Export bootstrapped EWS
-df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot.csv')
+# Export bootstrapped EWS (quantiles)
+df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot_quantiles.csv')
 
 # Export bootstrapped pspec (for one sample)
 df_pspec_boot.to_csv('data_export/'+dir_name+'/pspec_boot.csv')

@@ -5,7 +5,7 @@ Created on Tue Feb  5 15:35:06 2019
 
 Function to bootstrap the rolling window outupts of a time-series
 
-@author: tb460
+@author: Thomas Bury
 """
 
 
@@ -18,10 +18,10 @@ import pandas as pd
 
 
 
-# Modules for filtering timeseries
+# Modules for smoothing timeseries
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
-# Module for bootstrapping
+# Module for block-bootstrapping time-series
 from arch.bootstrap import StationaryBootstrap, CircularBlockBootstrap
 
 
