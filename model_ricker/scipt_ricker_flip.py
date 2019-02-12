@@ -33,7 +33,7 @@ from roll_bootstrap import roll_bootstrap
 
 
 # Name of directory within data_export
-dir_name = 'flip_block20_ham80_rw04_noise004'
+dir_name = 'flip_block20_ham80_rw04'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -53,7 +53,7 @@ t0 = 0
 tmax = 1000
 tburn = 100 # burn-in period
 seed = 0 # random number generation seed
-sigma = 0.04 # noise intensity
+sigma = 0.02 # noise intensity
 
 
 
@@ -70,7 +70,7 @@ pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
 # Bootstrapping parameters
 block_size = 20 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 20 # number of bootstrapping samples to take
+n_samples = 100 # number of bootstrapping samples to take
 roll_offset = 20 # rolling window offset
 
 
