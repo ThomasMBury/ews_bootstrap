@@ -220,24 +220,30 @@ def roll_bootstrap(raw_series,
 
 
 
+
+
+
 #----------------------------------------
 # Compute bootstrapped confidence intervals
 #–--------------------------------------
     
 from arch.bootstrap import IIDBootstrap
 
-def mean_ci(array, alpha):
+def mean_ci(series, alpha):
     '''
-    Compute the bootstrap confidence intervals (to alpha%) of the mean of array
+    Compute the bootstrap confidence intervals (to alpha%) of the mean of data in series
     Input:
-        array: numpy array of data
+        series: pandas Series of data
         alpha: numeric for percentile
     Ouptut:
         Dicitonary of mean, lower and upper bound.
     '''
+        
     
-    # Compute the mean of the array
-    mean = np.mean(array)
+    # Compute the mean of the Series
+    mean = series.mean()
+    # Obtain the values of the Sereis as an array
+    array = series.values
     # Bootstrap the array (sample with replacement)
     bs = IIDBootstrap(array)
     # Compute confidence intervals of bootstrapped distribution
@@ -249,6 +255,10 @@ def mean_ci(array, alpha):
     # Output dictionary
     dict_out = {"Mean": mean, "Lower": lower, "Upper": upper}
     return dict_out
+
+
+
+
 
 
 

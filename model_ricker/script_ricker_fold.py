@@ -28,7 +28,7 @@ from ews_compute import ews_compute
 
 # Import bootstrap module
 sys.path.append('../')
-from roll_bootstrap import roll_bootstrap
+from roll_bootstrap import roll_bootstrap, mean_ci
 
 
 
@@ -245,6 +245,18 @@ df_ews_boot = pd.concat(list_df_ews).reset_index(drop=True).set_index(['Time','S
 
 # Concatenate power spectrum DataFrames
 df_pspec_boot = pd.concat(list_pspec)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
