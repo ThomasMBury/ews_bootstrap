@@ -253,67 +253,33 @@ df_pspec_boot = pd.concat(list_pspec)
 
 
 
-
-
-
-
-
-
-
-
-
-
 #---------------------------------------
 # Compute mean and confidence intervals
 #–----------------------------------------
 
 
-# Function to find mean confidence intervals of array
-def conf_int(series, alpha=0.95):
-    '''
-    Compute mean, and upper/lower confidence intervals at alpha%
-    Input:
-        - series: Pandas series indexed by time and sample number
-        - alpha: Confidence interval percentage
-    
-    Output: Pandas Dataframe indexed by time with column labels ['Mean','Lower','Upper']
-    '''
-    
-    # Group Series by Time
-    gen = series.groupby('Time')
-    
-    def bounds(array, alpha):
-        
-        # Use Seaborn implementation for finding confidence intervals
-        [lower, upper] = sns.utils.ci(sns.algorithms.bootstrap(array), which=alpha)
-        mean = np.mean(array)
-        return [mean, lower, upper]
-    
-    # Apply to Series
-    df_temp = gen.apply(lambda x: bounds(x, alpha=0.95))
-    
-    # Put values in df into a 2d array
-    data = np.array(df_temp.values.tolist())
-    
-    # Put into a DataFrame with the appropriate columns
-    df_out = pd.DataFrame(data, columns=['Mean','Lower','Upper'],
-                          index = df_temp.index)
-    
-    
-    return df_out
-
-# Apply function to all relevant EWS and export
+# Relevant EWS and their shorthand for export files
 ews_export = ['Variance','Lag-1 AC','Lag-2 AC','Lag-3 AC','AIC fold',
               'AIC hopf', 'AIC null', 'Smax']
 
 ews_shorthand = ['var','ac1','ac2','ac3','aicf','aich','aicn','smax']
 
 
+# List to store confidence intervals for each EWS
+list_intervals = []
+
+# Loop through each EWS
 for i in range(len(ews_export)):
-    # Compute mean, upper and lower intervals
-    data_out = conf_int(df_ews_boot[ews_export[i]])
-    # Export dataframe
-    data_out.to_csv('data_export/'+dir_name+'/ews_boot_'+ews_shorthand[i]+'.csv')
+    
+    # Compute mean, and confidence intervals
+    series_intervals = df_ews_boot[ews_export[i]].groupby('Time').apply(mean_ci, alpha=0.95)
+    
+    # Add to the list
+    list_intervals.append(series_intervals)
+    
+# Concatenate the series
+df_intervals = pd.concat(list_intervals, axis=1)
+    
 
 
 
