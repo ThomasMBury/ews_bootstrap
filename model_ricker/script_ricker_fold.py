@@ -33,7 +33,7 @@ from roll_bootstrap import roll_bootstrap, mean_ci
 
 
 # Name of directory within data_export
-dir_name = 'fold_test'
+dir_name = 'fold_block20_ham80_rw025'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -51,9 +51,9 @@ print("Compute bootstrapped EWS for the Ricker model going through the Fold bifu
 # Simulation parameters
 dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
-tmax = 200
+tmax = 1000
 tburn = 100 # burn-in period
-seed = 0 # random number generation seed
+seed = 1 # random number generation seed
 sigma = 0.02 # noise intensity
 
 # EWS parameters
@@ -252,7 +252,6 @@ df_pspec_boot = pd.concat(list_pspec)
 
 
 
-
 #---------------------------------------
 # Compute mean and confidence intervals
 #–----------------------------------------
@@ -261,8 +260,6 @@ df_pspec_boot = pd.concat(list_pspec)
 # Relevant EWS and their shorthand for export files
 ews_export = ['Variance','Lag-1 AC','Lag-2 AC','Lag-3 AC','AIC fold',
               'AIC hopf', 'AIC null', 'Smax']
-
-ews_shorthand = ['var','ac1','ac2','ac3','aicf','aich','aicn','smax']
 
 
 # List to store confidence intervals for each EWS
@@ -283,16 +280,9 @@ df_intervals = pd.concat(list_intervals, axis=1)
 
 
 
-
-
-
-
-
-
 #--------------------------------------
 # Plot summary statistics of EWS
 #--------------------------------------
-
 
 
 ## Plot of variance of bootstrapped samples
@@ -353,20 +343,20 @@ ac_plot = sns.relplot(x="Time",
 
 
 
-#-------------------------
-# Compute quantiles
-#–------------------------
-
-
-# Quantiles to compute
-quantiles = [0.05,0.25,0.5,0.75,0.95]
-
-# DataFrame of quantiles for each EWS
-df_quant = df_ews_boot.groupby(level=0).quantile(quantiles, axis=0)
-# Rename and reorder index of DataFrame
-df_quant.index.rename(['Time','Quantile'], inplace=True)
-df_quant = df_quant.reorder_levels(['Quantile','Time']).sort_index()
-
+##-------------------------
+## Compute quantiles
+##–------------------------
+#
+#
+## Quantiles to compute
+#quantiles = [0.05,0.25,0.5,0.75,0.95]
+#
+## DataFrame of quantiles for each EWS
+#df_quant = df_ews_boot.groupby(level=0).quantile(quantiles, axis=0)
+## Rename and reorder index of DataFrame
+#df_quant.index.rename(['Time','Quantile'], inplace=True)
+#df_quant = df_quant.reorder_levels(['Quantile','Time']).sort_index()
+#
 
 
 #-------------------------------------
@@ -379,8 +369,11 @@ df_ews.reset_index().to_csv('data_export/'+dir_name+'/ews_orig.csv')
 # Export power spectra of original time-series
 df_pspec[['Empirical']].dropna().to_csv('data_export/'+dir_name+'/pspec_orig.csv')
 
-# Export bootstrapped EWS (quantiles)
-df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot_quantiles.csv')
+# Export bootstrapped EWS (all samples)
+df_ews_boot[ews_export].to_csv('data_export/'+dir_name+'/ews_boot.csv')
+
+# Export confidence intervals and mean of bootstrapped EWS
+df_intervals.to_csv('data_export/'+dir_name+'/ews_intervals.csv')
 
 # Export bootstrapped pspec (for one sample)
 df_pspec_boot.to_csv('data_export/'+dir_name+'/pspec_boot.csv')

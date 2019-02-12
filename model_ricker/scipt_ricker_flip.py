@@ -248,6 +248,33 @@ df_pspec_boot = pd.concat(list_pspec)
 
 
 
+#---------------------------------------
+# Compute mean and confidence intervals
+#–----------------------------------------
+
+
+# Relevant EWS and their shorthand for export files
+ews_export = ['Variance','Lag-1 AC','Lag-2 AC','Lag-3 AC','AIC fold',
+              'AIC hopf', 'AIC null', 'Smax']
+
+
+# List to store confidence intervals for each EWS
+list_intervals = []
+
+# Loop through each EWS
+for i in range(len(ews_export)):
+    
+    # Compute mean, and confidence intervals
+    series_intervals = df_ews_boot[ews_export[i]].groupby('Time').apply(mean_ci, alpha=0.95)
+    
+    # Add to the list
+    list_intervals.append(series_intervals)
+    
+# Concatenate the series
+df_intervals = pd.concat(list_intervals, axis=1)
+
+
+
 
 #--------------------------------------
 # Plot summary statistics of EWS
@@ -304,23 +331,22 @@ smax_plot = sns.relplot(x="Time",
 
 
 
-#----------------------------------
-# Compute quantiles of bootstrapped EWS
-#–---------------------------------------
-
-# Quantiles to compute
-quantiles = [0.05,0.25,0.5,0.75,0.95]
-
-# DataFrame of quantiles for each EWS
-df_quant = df_ews_boot.groupby(level=0).quantile(quantiles, axis=0)
-# Rename and reorder index of DataFrame
-df_quant.index.rename(['Time','Quantile'], inplace=True)
-df_quant = df_quant.reorder_levels(['Quantile','Time']).sort_index()
-
-## Plot of quantiles
-#df_quant.loc[0.05:0.95]['Variance'].unstack(level=0).plot()
-
-
+##----------------------------------
+## Compute quantiles of bootstrapped EWS
+##–---------------------------------------
+#
+## Quantiles to compute
+#quantiles = [0.05,0.25,0.5,0.75,0.95]
+#
+## DataFrame of quantiles for each EWS
+#df_quant = df_ews_boot.groupby(level=0).quantile(quantiles, axis=0)
+## Rename and reorder index of DataFrame
+#df_quant.index.rename(['Time','Quantile'], inplace=True)
+#df_quant = df_quant.reorder_levels(['Quantile','Time']).sort_index()
+#
+### Plot of quantiles
+##df_quant.loc[0.05:0.95]['Variance'].unstack(level=0).plot()
+#
 
 
 #-------------------------------------
@@ -333,8 +359,11 @@ df_ews.reset_index().to_csv('data_export/'+dir_name+'/ews_orig.csv')
 # Export power spectra of original time-series
 df_pspec[['Empirical']].dropna().to_csv('data_export/'+dir_name+'/pspec_orig.csv')
 
-# Export bootstrapped EWS
-df_quant.reset_index().to_csv('data_export/'+dir_name+'/ews_boot.csv')
+# Export bootstrapped EWS (all samples)
+df_ews_boot[ews_export].to_csv('data_export/'+dir_name+'/ews_boot.csv')
+
+# Export confidence intervals and mean of bootstrapped EWS
+df_intervals.to_csv('data_export/'+dir_name+'/ews_intervals.csv')
 
 # Export bootstrapped pspec (for one sample)
 df_pspec_boot.to_csv('data_export/'+dir_name+'/pspec_boot.csv')
