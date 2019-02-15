@@ -33,7 +33,7 @@ from roll_bootstrap import roll_bootstrap, mean_ci
 
 
 # Name of directory within data_export
-dir_name = 'fold_block20_ham80_rw04'
+dir_name = 'fold_block10_ham80_rw04'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -68,7 +68,7 @@ sweep = False # during optimisation, sweep through initialisation parameters
 
 
 # Bootstrapping parameters
-block_size = 20 # size of blocks used to resample time-series
+block_size = 10 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
 n_samples = 100 # number of bootstrapping samples to take
 roll_offset = 20 # rolling window offset
