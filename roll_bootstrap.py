@@ -199,9 +199,9 @@ def roll_bootstrap(raw_series,
         # Append the list of samples
         list_samples.append(df_samples_temp)
         
-        # Print update
-        if i % 1 ==0:
-            print('Bootstrap samples for window at t = %.2f complete' % (t_point))
+#        # Print update
+#        if i % 1 ==0:
+#            print('Bootstrap samples for window at t = %.2f complete' % (t_point))
             
         i += 1
     
