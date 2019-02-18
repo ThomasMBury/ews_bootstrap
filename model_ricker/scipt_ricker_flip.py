@@ -28,7 +28,7 @@ from ews_compute import ews_compute
 
 # Import Bootstrap module 
 sys.path.append('../')
-from roll_bootstrap import roll_bootstrap
+from roll_bootstrap import roll_bootstrap, mean_ci
 
 
 
@@ -65,7 +65,7 @@ lags = [1,2,3] # autocorrelation lag times
 ham_length = 80 # number of data points in Hamming window
 ham_offset = 0.5 # proportion of Hamming window to offset by upon each iteration
 pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
-
+sweep = False # whether to sweep over optimisation parameters
 
 # Bootstrapping parameters
 block_size = 20 # size of blocks used to resample time-series
@@ -151,7 +151,8 @@ ews_dic = ews_compute(series,
                       ews = ews,
                       lag_times = lags,
                       ham_length = ham_length,
-                      ham_offset = ham_offset)
+                      ham_offset = ham_offset
+                      sweep = sweep)
 
 # DataFrame of EWS
 df_ews = ews_dic['EWS metrics']

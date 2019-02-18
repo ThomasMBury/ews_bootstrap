@@ -144,6 +144,11 @@ def roll_bootstrap(raw_series,
     rw_size=int(np.floor(roll_window * raw_series.shape[0]))
     
     
+    # Compute the Lowess span as a proportion if given as absolute
+    if not 0 < span <= 1:
+        span = span/raw_series.shape[0]
+    else:
+        span = span
     
 
     ## Data detrending
@@ -153,6 +158,8 @@ def roll_bootstrap(raw_series,
         series = raw_series
     else: series = raw_series.loc[:upto]
     
+    
+
     
     # Smooth the series and compute the residuals
     smooth_data = lowess(series.values, series.index.values, frac=span)[:,1]
