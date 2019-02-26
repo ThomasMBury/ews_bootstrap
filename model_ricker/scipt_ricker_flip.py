@@ -33,7 +33,7 @@ from roll_bootstrap import roll_bootstrap, mean_ci
 
 
 # Name of directory within data_export
-dir_name = 'flip_block20_ham80_rw04'
+dir_name = 'flip_test'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -70,7 +70,7 @@ sweep = False # whether to sweep over optimisation parameters
 # Bootstrapping parameters
 block_size = 20 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 100 # number of bootstrapping samples to take
+n_samples = 2 # number of bootstrapping samples to take
 roll_offset = 20 # rolling window offset
 
 
@@ -151,7 +151,7 @@ ews_dic = ews_compute(series,
                       ews = ews,
                       lag_times = lags,
                       ham_length = ham_length,
-                      ham_offset = ham_offset
+                      ham_offset = ham_offset,
                       sweep = sweep)
 
 # DataFrame of EWS
@@ -218,7 +218,8 @@ for t in tVals:
                           lag_times = lags,
                           upto='Full',
                           ham_length = ham_length,
-                          ham_offset = ham_offset)
+                          ham_offset = ham_offset,
+                          sweep = sweep)
         
         # The DataFrame of EWS
         df_ews_temp = ews_dic['EWS metrics']
