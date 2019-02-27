@@ -17,37 +17,35 @@ Run from terminal using:
 
 
 
-
 # Import python libraries
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
-import sys # package to enter parameters from terminal
-
-
+import sys
 
 # Import EWS module
-import sys
-sys.path.append('../../early_warnings')
+sys.path.append('../../../early_warnings')
 from ews_compute import ews_compute
 
 # Import Bootstrap module 
-sys.path.append('../')
+sys.path.append('../../')
 from roll_bootstrap import roll_bootstrap, mean_ci
 
 
 
-# Name of directory within data_export
-dir_name = 'flip_test'
 
-if not os.path.exists('data_export/'+dir_name):
-    os.makedirs('data_export/'+dir_name)
+#---------------------
+# Parameters input from terminal
+#–----------------------
+  
+
+block_size_in = int(sys.argv[1])  
+rw_in = float(sys.argv[2])
 
 
-# Print update
-print("Compute bootstrapped EWS for the Ricker model going through the Flip bifurcation")
+print('''\nRunning Ricker-Flip script: block_size = %.2d, rw = %.2f\n'''
+% (block_size_in, rw_in))
+
 
 #--------------------------------
 # Global parameters
@@ -57,7 +55,7 @@ print("Compute bootstrapped EWS for the Ricker model going through the Flip bifu
 # Simulation parameters
 dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
-tmax = 1000
+tmax = 400
 tburn = 100 # burn-in period
 seed = 0 # random number generation seed
 sigma = 0.02 # noise intensity
@@ -66,7 +64,7 @@ sigma = 0.02 # noise intensity
 
 # EWS parameters
 span = 0.5
-rw = 0.4
+rw = rw_in
 ews = ['var','ac','smax','aic']
 lags = [1,2,3] # autocorrelation lag times
 ham_length = 80 # number of data points in Hamming window
@@ -75,7 +73,7 @@ pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
 sweep = False # whether to sweep over optimisation parameters
 
 # Bootstrapping parameters
-block_size = 20 # size of blocks used to resample time-series
+block_size = block_size_in # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
 n_samples = 2 # number of bootstrapping samples to take
 roll_offset = 20 # rolling window offset
@@ -146,6 +144,9 @@ df_traj = pd.DataFrame(data).set_index('Time')
 # Compute EWS (moments) without bootstrapping
 #-------------------------------------
 
+
+
+
 # Time-series data as a pandas Series
 series = df_traj['x']
         
@@ -183,6 +184,11 @@ df_ews[['Variance']].plot()
 #-------------------------------------
 # Compute EWS using bootstrapping
 #–----------------------------------
+
+# Print update
+print('Computing bootstrapped EWS')
+
+
 
 df_samples = roll_bootstrap(series,
                    span = span,
@@ -285,56 +291,7 @@ df_intervals = pd.concat(list_intervals, axis=1)
 
 
 
-#--------------------------------------
-# Plot summary statistics of EWS
-#--------------------------------------
 
-
-## Plot of variance of bootstrapped samples
-# Put DataFrame in form for Seaborn plot
-data = df_ews_boot.reset_index().melt(id_vars = 'Time',
-                         value_vars = ('Variance'),
-                         var_name = 'EWS',
-                         value_name = 'Magnitude')
-# Make plot with error bars
-var_plot = sns.relplot(x="Time", 
-            y="Magnitude",
-            hue="EWS", 
-            kind="line", 
-            data=data)
-
-
-
-## Plot of autocorrelation of bootstrapped samples
-# Put DataFrame in form for Seaborn plot
-data = df_ews_boot.reset_index().melt(id_vars = 'Time',
-                         value_vars = ('Lag-1 AC', 'Lag-2 AC','Lag-3 AC'),
-                         var_name = 'EWS',
-                         value_name = 'Magnitude')
-# Make plot with error bars
-ac_plot = sns.relplot(x="Time", 
-            y="Magnitude",
-            hue="EWS", 
-            kind="line", 
-            data=data)
-
-
-
-
-
-
-## Plot of Smax of bootstrapped samples
-# Put DataFrame in form for Seaborn plot
-data = df_ews_boot.reset_index().melt(id_vars = 'Time',
-                         value_vars = ('Smax'),
-                         var_name = 'EWS',
-                         value_name = 'Magnitude')
-# Make plot with error bars
-smax_plot = sns.relplot(x="Time", 
-            y="Magnitude",
-            hue="EWS", 
-            kind="line", 
-            data=data)
 
 
 
@@ -358,9 +315,17 @@ smax_plot = sns.relplot(x="Time",
 #
 
 
+
 #-------------------------------------
 # Export data for plotting in MMA
 #–------------------------------------
+
+# Directory to export data to
+dir_name = 'flip_'+'block'+str(block_size)+'_rw'+str(rw).replace(".","")+'_samples'+str(n_samples)
+
+if not os.path.exists('data_export/'+dir_name):
+    os.makedirs('data_export/'+dir_name)
+
 
 # Export EWS of original time-series
 df_ews.reset_index().to_csv('data_export/'+dir_name+'/ews_orig.csv')
@@ -378,6 +343,7 @@ df_intervals.to_csv('data_export/'+dir_name+'/ews_intervals.csv')
 df_pspec_boot.to_csv('data_export/'+dir_name+'/pspec_boot.csv')
 
 
+print('Data exported')
 
 
 
