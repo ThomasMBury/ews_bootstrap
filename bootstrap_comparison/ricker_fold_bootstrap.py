@@ -20,15 +20,7 @@ import seaborn as sns
 import os
 
 
-
-# Import EWS module
-import sys
-sys.path.append('../../early_warnings')
-from ews_compute import ews_compute
-
-# Import bootstrap module
-sys.path.append('../')
-from roll_bootstrap import roll_bootstrap, mean_ci
+from ewstools import ewstools
 
 
 
