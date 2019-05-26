@@ -25,7 +25,7 @@ from ewstools import ewstools
 
 
 # Name of directory within data_export
-dir_name = 'fold_block20_ham80_rw04'
+dir_name = 'bootstrap_tmax200_rw04_block20'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -43,16 +43,17 @@ print("Compute bootstrapped EWS for the Ricker model going through the Fold bifu
 # Simulation parameters
 dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
-tmax = 1000
+tmax = 400
 tburn = 100 # burn-in period
+numSims = 2
 seed = 0 # random number generation seed
 sigma = 0.02 # noise intensity
 
 # EWS parameters
 span = 0.5
 rw = 0.4
-ews = ['var','ac','smax','aic']
-lags = [1,2,3] # autocorrelation lag times
+ews = ['var','ac','cv','skew']
+lags = [1] # autocorrelation lag times
 ham_length = 80 # number of data points in Hamming window
 ham_offset = 0.5 # proportion of Hamming window to offset by upon each iteration
 pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
@@ -63,14 +64,15 @@ sweep = False # during optimisation, sweep through initialisation parameters
 block_size = 20 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
 n_samples = 100 # number of bootstrapping samples to take
-roll_offset = 20 # rolling window offset
+roll_offset = 10 # rolling window offset
 
 
 
 #----------------------------------
-# Simulate single transient realisation of Ricker model
+# Simulate many (transient) realisations
 #----------------------------------
 
+# Model
     
 # Model parameters
 r = 0.75 # growth rate
@@ -83,6 +85,8 @@ x0 = 0.8 # initial condition
 
 def de_fun(x,r,k,f,h,xi):
     return x*np.exp(r*(1-x/k)+xi) - f*x**2/(x**2+h**2)
+
+
 
 
 # Initialise arrays to store single time-series data
@@ -98,29 +102,50 @@ tcrit = b[b > bcrit].index[1]
 
 # Set seed
 np.random.seed(seed)
-   
-# Create brownian increments (s.d. sqrt(dt))
-dW_burn = np.random.normal(loc=0, scale=sigma*np.sqrt(dt), size = int(tburn/dt))
-dW = np.random.normal(loc=0, scale=sigma*np.sqrt(dt), size = len(t))
 
-# Run burn-in period on x0
-for i in range(int(tburn/dt)):
-    x0 = de_fun(x0,r,k,bl,h,dW_burn[i])
+
+
+
+
+# Initialise a list to collect trajectories
+list_traj_append = []
+
+# loop over simulations
+print('\nBegin simulations \n')
+for j in range(numSims):
     
-# Initial condition post burn-in period
-x[0]=x0
-
-# Run simulation
-for i in range(len(t)-1):
-    x[i+1] = de_fun(x[i],r,k,b.iloc[i], h,dW[i])
-    # make sure that state variable remains >= 0
-    if x[i+1] < 0:
-        x[i+1] = 0
+    
+    # Create brownian increments (s.d. sqrt(dt))
+    dW_burn = np.random.normal(loc=0, scale=sigma*np.sqrt(dt), size = int(tburn/dt))
+    dW = np.random.normal(loc=0, scale=sigma*np.sqrt(dt), size = len(t))
+    
+    # Run burn-in period on x0
+    for i in range(int(tburn/dt)):
+        x0 = de_fun(x0,r,k,bl,h,dW_burn[i])
         
-# Trajectory data stored in a DataFrame indexed by time
-data = { 'Time': t,
-            'x': x}
-df_traj = pd.DataFrame(data).set_index('Time')
+    # Initial condition post burn-in period
+    x[0]=x0
+    
+    # Run simulation
+    for i in range(len(t)-1):
+        x[i+1] = de_fun(x[i],r,k,b.iloc[i], h,dW[i])
+        # make sure that state variable remains >= 0
+        if x[i+1] < 0:
+            x[i+1] = 0
+            
+    # Store series data in a temporary DataFrame
+    data = {'Realisation number': (j+1)*np.ones(len(t)),
+                'Time': t,
+                'x': x}
+    df_temp = pd.DataFrame(data)
+    # Append to list
+    list_traj_append.append(df_temp)
+    
+    print('Simulation '+str(j+1)+' complete')
+
+#  Concatenate DataFrame from each realisation
+df_traj = pd.concat(list_traj_append)
+df_traj.set_index(['Realisation number','Time'], inplace=True)
 
 
 

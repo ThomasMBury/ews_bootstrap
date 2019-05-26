@@ -24,7 +24,7 @@ import os
 from ewstools import ewstools
 
 # Name of directory within data_export
-dir_name = 'tmax400_rw04'
+dir_name = 'tmax200_rw04'
 
 if not os.path.exists('data_export/'+dir_name):
     os.makedirs('data_export/'+dir_name)
@@ -45,7 +45,7 @@ dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
 tmax = 200
 tburn = 100 # burn-in period
-numSims = 100
+numSims = 2
 seed = 1 # random number generation seed
 sigma = 0.02 # noise intensity
 
@@ -61,7 +61,11 @@ pspec_roll_offset = 20 # offset for rolling window when doing spectrum metrics
 sweep = False # during optimisation, sweep through initialisation parameters
 
 
-
+# Bootstrapping parameters
+block_size = 20 # size of blocks used to resample time-series
+bs_type = 'Stationary' # type of bootstrapping
+n_samples = 2 # number of bootstrapping samples to take
+roll_offset = 10 # rolling window offset
 
 
 
@@ -150,7 +154,7 @@ df_traj.set_index(['Realisation number','Time'], inplace=True)
 
 
 #----------------------
-## Execute ews_compute for each realisation 
+## Compute EWS of each realisation (no bootstrapping)
 #---------------------
 
 # Filter time-series to have time-spacing dt2
@@ -158,7 +162,6 @@ df_traj_filt = df_traj.loc[::int(dt2/dt)]
 
 # set up a list to store output dataframes from ews_compute- we will concatenate them at the end
 appended_ews = []
-appended_pspec = []
 appended_ktau = []
 
 # loop through realisation number
@@ -172,25 +175,18 @@ for i in range(numSims):
                           span = span,
                           lag_times = lags, 
                           ews = ews,
-                          ham_length = ham_length,
-                          ham_offset = ham_offset,
-                          pspec_roll_offset = pspec_roll_offset,
-                          upto=tcrit,
-                          sweep=False)
+                          upto = tcrit)
         
         # The DataFrame of EWS
         df_ews_temp = ews_dic['EWS metrics']
-#        # The DataFrame of power spectra
-#        df_pspec_temp = ews_dic['Power spectrum']
+
         # The DataFrame of ktau values
         df_ktau_temp = ews_dic['Kendall tau']
         
         # Include a column in the DataFrames for realisation number and variable
         df_ews_temp['Realisation number'] = i+1
         df_ews_temp['Variable'] = var
-        
-#        df_pspec_temp['Realisation number'] = i+1
-#        df_pspec_temp['Variable'] = var
+
         
         df_ktau_temp['Realisation number'] = i+1
         df_ktau_temp['Variable'] = var
@@ -208,11 +204,117 @@ for i in range(numSims):
 # Concatenate EWS DataFrames. Index [Realisation number, Variable, Time]
 df_ews = pd.concat(appended_ews).reset_index().set_index(['Realisation number','Variable','Time'])
 
-# Concatenate power spectrum DataFrames. Index [Realisation number, Variable, Time, Frequency]
-#df_pspec = pd.concat(appended_pspec).reset_index().set_index(['Realisation number','Variable','Time','Frequency'])
 
 # Concatenate kendall tau DataFrames. Index [Realisation number, Variable]
 df_ktau = pd.concat(appended_ktau).reset_index().set_index(['Realisation number','Variable'])
+
+
+
+#----------------------
+## Compute EWS of each realisation *with bootstrapping*
+#---------------------
+
+print('\nBegin bootstrapped EWS computation\n')
+
+
+# Make list of samples from each realisation
+samples_list = []
+
+for i in range(numSims):
+    
+    # Compute samples for particular realisation
+    df_samples_temp = ewstools.roll_bootstrap(df_traj.loc[i+1]['x'],
+                   span = span,
+                   roll_window = rw,
+                   roll_offset = roll_offset,
+                   upto = tcrit,
+                   n_samples = n_samples,
+                   bs_type = bs_type,
+                   block_size = block_size
+                   )
+    
+    # Add realisation number
+    df_samples_temp['Realisation number'] = i+1
+    
+    # Add dataframe to list
+    samples_list.append(df_samples_temp)
+
+# Concatenate into a full DataFrame of sample time-series
+df_samples = pd.concat(samples_list).reset_index().set_index(['Realisation number','Time','Sample','Wintime'])
+
+
+
+# Execute ews_compute for each bootstrapped time-series
+
+
+# List to store EWS DataFrames
+list_df_ews_boot = []
+
+# Realtime values
+tVals = np.array(df_samples.index.levels[1])
+# Sample values
+sampleVals = np.array(df_samples.index.levels[2])
+
+# Loop through realisation number
+for i in range(numSims):
+    
+    # Loop through realtimes
+    for t in tVals:
+        
+        # Loop through sample values
+        for sample in sampleVals:
+            
+            # Compute EWS for near-stationary sample series
+            series_temp = df_samples.loc[i+1].loc[t].loc[sample]['x']
+            
+            ews_dic = ewstools.ews_compute(series_temp,
+                              roll_window = 1, #Already within a rw
+                              smooth = 'None',
+                              ews = ews,
+                              lag_times = lags,
+                              upto='Full')
+            
+            # The DataFrame of EWS
+            df_ews_boot_temp = ews_dic['EWS metrics']
+                
+            # Drop NaN values
+            df_ews_boot_temp.dropna(inplace=True)     
+            
+            # Include columns for realnum, sample value and realtime
+            df_ews_boot_temp['Realisation number'] = i+1
+            df_ews_boot_temp['Sample'] = sample
+            df_ews_boot_temp['Time'] = t
+            
+            # Append list_df_ews
+            list_df_ews_boot.append(df_ews_boot_temp)
+
+        
+    # Print update
+    print('EWS for realisation %d complete' %(i+1))
+        
+# Concatenate EWS DataFrames. Index [Realtime, Sample]
+df_ews_boot = pd.concat(list_df_ews_boot).reset_index(drop=True).set_index(['Realisation number','Sample','Time']).sort_index()
+
+
+# Compute mean of EWS over the samples
+df_ews_means = df_ews_boot.mean(level=(0,2))
+
+# Compute the kendall tau values for each realisation number
+time_vals = df_ews_means.loc[1].index.tolist()
+
+ktau_var = df_ews_means['Variance'].corr(time_vals, method='kendall')
+ktau_ac1 = df_ews_means['Lag-1 AC'].corr(time_vals, method='kendall')
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -241,25 +343,16 @@ fig2 = df_ktau[['Variance','Coefficient of variation','Lag-1 AC']].plot(kind='bo
 fig2.set_ylim(0,1)
 
 
-#
-##------------------------------------
-### Export data / figures
-##-----------------------------------
-#
-## Export power spec5trum evolution (grid plot)
-#plot_pspec.savefig('figures/pspec_evol.png', dpi=200)
-#
-### Export the first 5 realisations to see individual behaviour
-## EWS DataFrame (includes trajectories)
-#df_ews.loc[:5].to_csv('data_export/'+dir_name+'/ews_singles.csv')
-## Power spectrum DataFrame (only empirical values)
-#df_pspec.loc[:5,'Empirical'].dropna().to_csv('data_export/'+dir_name+'/pspecs.csv',
-#            header=True)
-#
+
+#------------------------------------
+## Export data / figures
+#-----------------------------------
+
+
 #
 ## Export kendall tau values
 #df_ktau.to_csv('data_export/'+dir_name+'/ktau.csv')
-#
+
 
 
 
