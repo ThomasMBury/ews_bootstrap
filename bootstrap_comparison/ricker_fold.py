@@ -3,7 +3,7 @@
 """
 Created on Fri Feb  8 11:09:11 2019
 
-Compute EWS without bootstrapping.
+Compute EWS with and without bootstrapping and compare Kendall taus.
 Ricker model going through the Fold bifurcation.
 
 
@@ -31,7 +31,7 @@ if not os.path.exists('data_export/'+dir_name):
 
 
 # Print update
-print('''Compute EWS for multiple simulations of the Ricker model 
+print('''Compute EWS for multiple simulations of the Ricker model
          going through the Fold bifurcation''')
 
 
@@ -45,9 +45,9 @@ dt = 1 # time-step (must be 1 since discrete-time system)
 t0 = 0
 tmax = 200
 tburn = 100 # burn-in period
-numSims = 2
-seed = 1 # random number generation seed
-sigma = 0.02 # noise intensity
+numSims = 10
+seed = 3 # random number generation seed
+sigma = 0.2 # noise intensity
 
 # EWS parameters
 dt2 = 1 # spacing between time-series for EWS computation
@@ -62,10 +62,10 @@ sweep = False # during optimisation, sweep through initialisation parameters
 
 
 # Bootstrapping parameters
-block_size = 20 # size of blocks used to resample time-series
+block_size = 40 # size of blocks used to resample time-series
 bs_type = 'Stationary' # type of bootstrapping
-n_samples = 2 # number of bootstrapping samples to take
-roll_offset = 10 # rolling window offset
+n_samples = 10 # number of bootstrapping samples to take
+roll_offset = 5 # rolling window offset
 
 
 
@@ -74,7 +74,7 @@ roll_offset = 10 # rolling window offset
 #----------------------------------
 
 # Model
-    
+
 # Model parameters
 r = 0.75 # growth rate
 k = 10 # carrying capacity
@@ -85,7 +85,7 @@ bcrit = 2.364 # bifurcation point (computed in Mathematica)
 x0 = 0.8 # initial condition
 
 def de_fun(x,r,k,f,h,xi):
-    return x*np.exp(r*(1-x/k)+xi) - f*x**2/(x**2+h**2)
+    return x*np.exp(r*(1-x/k)) - f*x**2/(x**2+h**2) + xi
 
 
 
@@ -114,26 +114,26 @@ list_traj_append = []
 # loop over simulations
 print('\nBegin simulations \n')
 for j in range(numSims):
-    
-    
+
+
     # Create brownian increments (s.d. sqrt(dt))
     dW_burn = np.random.normal(loc=0, scale=sigma*np.sqrt(dt), size = int(tburn/dt))
     dW = np.random.normal(loc=0, scale=sigma*np.sqrt(dt), size = len(t))
-    
+
     # Run burn-in period on x0
     for i in range(int(tburn/dt)):
         x0 = de_fun(x0,r,k,bl,h,dW_burn[i])
-        
+
     # Initial condition post burn-in period
     x[0]=x0
-    
+
     # Run simulation
     for i in range(len(t)-1):
         x[i+1] = de_fun(x[i],r,k,b.iloc[i], h,dW[i])
         # make sure that state variable remains >= 0
         if x[i+1] < 0:
             x[i+1] = 0
-            
+
     # Store series data in a temporary DataFrame
     data = {'Realisation number': (j+1)*np.ones(len(t)),
                 'Time': t,
@@ -141,7 +141,7 @@ for j in range(numSims):
     df_temp = pd.DataFrame(data)
     # Append to list
     list_traj_append.append(df_temp)
-    
+
     print('Simulation '+str(j+1)+' complete')
 
 #  Concatenate DataFrame from each realisation
@@ -169,33 +169,33 @@ print('\nBegin EWS computation\n')
 for i in range(numSims):
     # loop through variable
     for var in ['x']:
-        
-        ews_dic = ewstools.ews_compute(df_traj_filt.loc[i+1][var], 
-                          roll_window = rw, 
+
+        ews_dic = ewstools.ews_compute(df_traj_filt.loc[i+1][var],
+                          roll_window = rw,
                           span = span,
-                          lag_times = lags, 
+                          lag_times = lags,
                           ews = ews,
                           upto = tcrit)
-        
+
         # The DataFrame of EWS
         df_ews_temp = ews_dic['EWS metrics']
 
         # The DataFrame of ktau values
         df_ktau_temp = ews_dic['Kendall tau']
-        
+
         # Include a column in the DataFrames for realisation number and variable
         df_ews_temp['Realisation number'] = i+1
         df_ews_temp['Variable'] = var
 
-        
+
         df_ktau_temp['Realisation number'] = i+1
         df_ktau_temp['Variable'] = var
-                
+
         # Add DataFrames to list
         appended_ews.append(df_ews_temp)
 #        appended_pspec.append(df_pspec_temp)
         appended_ktau.append(df_ktau_temp)
-        
+
     # Print status every realisation
     if np.remainder(i+1,1)==0:
         print('EWS for realisation '+str(i+1)+' complete')
@@ -221,7 +221,7 @@ print('\nBegin bootstrapped EWS computation\n')
 samples_list = []
 
 for i in range(numSims):
-    
+
     # Compute samples for particular realisation
     df_samples_temp = ewstools.roll_bootstrap(df_traj.loc[i+1]['x'],
                    span = span,
@@ -232,10 +232,10 @@ for i in range(numSims):
                    bs_type = bs_type,
                    block_size = block_size
                    )
-    
+
     # Add realisation number
     df_samples_temp['Realisation number'] = i+1
-    
+
     # Add dataframe to list
     samples_list.append(df_samples_temp)
 
@@ -257,41 +257,41 @@ sampleVals = np.array(df_samples.index.levels[2])
 
 # Loop through realisation number
 for i in range(numSims):
-    
+
     # Loop through realtimes
     for t in tVals:
-        
+
         # Loop through sample values
         for sample in sampleVals:
-            
+
             # Compute EWS for near-stationary sample series
             series_temp = df_samples.loc[i+1].loc[t].loc[sample]['x']
-            
+
             ews_dic = ewstools.ews_compute(series_temp,
                               roll_window = 1, #Already within a rw
                               smooth = 'None',
                               ews = ews,
                               lag_times = lags,
                               upto='Full')
-            
+
             # The DataFrame of EWS
             df_ews_boot_temp = ews_dic['EWS metrics']
-                
+
             # Drop NaN values
-            df_ews_boot_temp.dropna(inplace=True)     
-            
+            df_ews_boot_temp.dropna(inplace=True)
+
             # Include columns for realnum, sample value and realtime
             df_ews_boot_temp['Realisation number'] = i+1
             df_ews_boot_temp['Sample'] = sample
             df_ews_boot_temp['Time'] = t
-            
+
             # Append list_df_ews
             list_df_ews_boot.append(df_ews_boot_temp)
 
-        
+
     # Print update
     print('EWS for realisation %d complete' %(i+1))
-        
+
 # Concatenate EWS DataFrames. Index [Realtime, Sample]
 df_ews_boot = pd.concat(list_df_ews_boot).reset_index(drop=True).set_index(['Realisation number','Sample','Time']).sort_index()
 
@@ -299,19 +299,31 @@ df_ews_boot = pd.concat(list_df_ews_boot).reset_index(drop=True).set_index(['Rea
 # Compute mean of EWS over the samples
 df_ews_means = df_ews_boot.mean(level=(0,2))
 
+
+# Function to compute kendall tau values from a series indexed by time
+def computeKtau(series):
+    # Write the time-values as their own series (indexed by itself)
+    tSeries = pd.Series(series.index, index = series.index)
+    # Compute kendall tau value
+    ktau = series.corr(tSeries, method='kendall')
+    return ktau
+
+
+ktau_var = []
+ktau_ac = []
+
 # Compute the kendall tau values for each realisation number
-time_vals = df_ews_means.loc[1].index.tolist()
+for i in range(numSims):
+    ktau_var_temp = computeKtau(df_ews_means['Variance'].loc[i+1])
+    ktau_ac_temp = computeKtau(df_ews_means['Lag-1 AC'].loc[i+1])
 
-ktau_var = df_ews_means['Variance'].corr(time_vals, method='kendall')
-ktau_ac1 = df_ews_means['Lag-1 AC'].corr(time_vals, method='kendall')
-
-
-
-
-
+    # Add to lists
+    ktau_var.append(ktau_var_temp)
+    ktau_ac.append(ktau_ac_temp)
 
 
-
+# Construct DataFrame of EWS
+df_ktau_boot = pd.DataFrame({'Variance':ktau_var, 'Lag-1 AC':ktau_ac})
 
 
 
@@ -323,24 +335,27 @@ ktau_ac1 = df_ews_means['Lag-1 AC'].corr(time_vals, method='kendall')
 # Plots to visualise EWS
 #-------------------------
 
-# Realisation number to plot
-plot_num = 1
-var = 'x'
-## Plot of trajectory, smoothing and EWS of var (x or y)
-fig1, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(6,3))
-df_ews.loc[plot_num,var][['State variable','Smoothing']].plot(ax=axes[0],
-          title='Early warning signals for a single realisation')
-df_ews.loc[plot_num,var]['Variance'].plot(ax=axes[1],legend=True)
-df_ews.loc[plot_num,var][['Lag-1 AC']].plot(ax=axes[1], secondary_y=True,legend=True)
+## Realisation number to plot
+#plot_num = 1
+#var = 'x'
+### Plot of trajectory, smoothing and EWS of var (x or y)
+#fig1, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(6,3))
+#df_ews.loc[plot_num,var][['State variable','Smoothing']].plot(ax=axes[0],
+#          title='Early warning signals for a single realisation')
+#df_ews.loc[plot_num,var]['Variance'].plot(ax=axes[1],legend=True)
+#df_ews.loc[plot_num,var][['Lag-1 AC']].plot(ax=axes[1], secondary_y=True,legend=True)
+#
 
 
+# Box plot of Kendall values for non-bootstrap EWS
 
-
-
-# Box plot of Kendall values
-
-fig2 = df_ktau[['Variance','Coefficient of variation','Lag-1 AC']].plot(kind='box')
+fig2 = df_ktau[['Variance','Coefficient of variation','Lag-1 AC']].plot(kind='box', title='No bootstrap')
 fig2.set_ylim(0,1)
+
+# Box plot of Ktau values for bootstrapped EWS
+
+fig3 = df_ktau_boot[['Variance','Lag-1 AC']].plot(kind='box', title='bootstrap')
+fig3.set_ylim(0,1)
 
 
 
@@ -352,15 +367,3 @@ fig2.set_ylim(0,1)
 #
 ## Export kendall tau values
 #df_ktau.to_csv('data_export/'+dir_name+'/ktau.csv')
-
-
-
-
-
-
-
-
-
-
-
-
