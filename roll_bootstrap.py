@@ -236,9 +236,9 @@ def roll_bootstrap(raw_series,
     
 from arch.bootstrap import IIDBootstrap
 
-def mean_ci(series, alpha):
+def mean_ci(data, alpha):
     '''
-    Compute the bootstrap confidence intervals (to alpha%) of the mean of data in series
+    Compute the bootstraped confidence intervals (to alpha%) of the mean of data in series
     Input:
         series: pandas Series of data
         alpha: numeric for percentile

@@ -1,0 +1,11 @@
+tmax seed sigma span rw ham_length ham_offset sweep block_size bs_type n_samples
+1000 0 0.02 0.5 0.4 40 0.5 true,false 20 Stationary 100
+1000 0 0.02 0.5 0.4 40 0.5 true,false 40 Stationary 100
+1000 0 0.02 0.5 0.4 40 0.5 true,false 60 Stationary 100
+1000 0 0.02 0.5 0.4 40 0.5 true,false 80 Stationary 100
+1000 0 0.02 0.5 0.4 40 0.5 true,false 100 Stationary 100
+1000 0 0.02 0.5 0.4 80 0.5 true,false 20 Stationary 100
+1000 0 0.02 0.5 0.4 80 0.5 true,false 40 Stationary 100
+1000 0 0.02 0.5 0.4 80 0.5 true,false 60 Stationary 100
+1000 0 0.02 0.5 0.4 80 0.5 true,false 80 Stationary 100
+1000 0 0.02 0.5 0.4 80 0.5 true,false 100 Stationary 100
